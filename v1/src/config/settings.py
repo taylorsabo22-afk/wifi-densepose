@@ -9,6 +9,15 @@ from functools import lru_cache
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from src.utils.platform import (
+    get_default_data_dir,
+    get_default_log_dir,
+    get_default_model_dir,
+    get_default_temp_dir,
+    get_default_backup_dir,
+    get_default_sqlite_fallback_path,
+)
+
 
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
@@ -71,7 +80,7 @@ class Settings(BaseSettings):
     # Failsafe settings
     enable_database_failsafe: bool = Field(default=True, description="Enable automatic SQLite failsafe when PostgreSQL unavailable")
     enable_redis_failsafe: bool = Field(default=True, description="Enable automatic Redis failsafe (disable when unavailable)")
-    sqlite_fallback_path: str = Field(default="./data/wifi_densepose_fallback.db", description="SQLite fallback database path")
+    sqlite_fallback_path: str = Field(default_factory=get_default_sqlite_fallback_path, description="SQLite fallback database path")
     
     # Hardware settings
     wifi_interface: str = Field(default="wlan0", description="WiFi interface name")
@@ -106,7 +115,7 @@ class Settings(BaseSettings):
         description="Log format"
     )
     log_file: Optional[str] = Field(default=None, description="Log file path")
-    log_directory: str = Field(default="./logs", description="Log directory path")
+    log_directory: str = Field(default_factory=get_default_log_dir, description="Log directory path")
     log_max_size: int = Field(default=10485760, description="Max log file size in bytes (10MB)")
     log_backup_count: int = Field(default=5, description="Number of log backup files")
     
@@ -119,10 +128,10 @@ class Settings(BaseSettings):
     backup_interval_seconds: int = Field(default=86400, description="Backup task interval in seconds")
     
     # Storage settings
-    data_storage_path: str = Field(default="./data", description="Data storage directory")
-    model_storage_path: str = Field(default="./models", description="Model storage directory")
-    temp_storage_path: str = Field(default="./temp", description="Temporary storage directory")
-    backup_directory: str = Field(default="./backups", description="Backup storage directory")
+    data_storage_path: str = Field(default_factory=get_default_data_dir, description="Data storage directory")
+    model_storage_path: str = Field(default_factory=get_default_model_dir, description="Model storage directory")
+    temp_storage_path: str = Field(default_factory=get_default_temp_dir, description="Temporary storage directory")
+    backup_directory: str = Field(default_factory=get_default_backup_dir, description="Backup storage directory")
     max_storage_size_gb: int = Field(default=100, description="Maximum storage size in GB")
     
     # API settings

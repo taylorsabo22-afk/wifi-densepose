@@ -55,9 +55,14 @@ async def _graceful_stop_server(pid: int, timeout: int, settings: Settings) -> N
     logger.info(f"Attempting graceful shutdown (timeout: {timeout}s)...")
     
     try:
-        # Send SIGTERM for graceful shutdown
-        os.kill(pid, signal.SIGTERM)
-        logger.info("Sent SIGTERM signal")
+        # Send SIGTERM for graceful shutdown (POSIX-only, guard for portability)
+        if hasattr(signal, "SIGTERM"):
+            os.kill(pid, signal.SIGTERM)
+            logger.info("Sent SIGTERM signal")
+        else:
+            # Fallback: send SIGINT which is universally available
+            os.kill(pid, signal.SIGINT)
+            logger.info("Sent SIGINT signal (SIGTERM unavailable on this platform)")
         
         # Wait for process to terminate
         start_time = time.time()
@@ -91,9 +96,14 @@ async def _force_stop_server(pid: int, settings: Settings) -> None:
     logger.info("Force stopping server...")
     
     try:
-        # Send SIGKILL for immediate termination
-        os.kill(pid, signal.SIGKILL)
-        logger.info("Sent SIGKILL signal")
+        if hasattr(signal, "SIGKILL"):
+            # Send SIGKILL for immediate termination (POSIX-only)
+            os.kill(pid, signal.SIGKILL)
+            logger.info("Sent SIGKILL signal")
+        else:
+            # Fallback on platforms without SIGKILL
+            os.kill(pid, signal.SIGINT)
+            logger.info("Sent SIGINT signal (SIGKILL unavailable on this platform)")
         
         # Wait a moment for process to die
         await asyncio.sleep(2)
@@ -101,7 +111,7 @@ async def _force_stop_server(pid: int, settings: Settings) -> None:
         # Verify process is dead
         try:
             os.kill(pid, 0)
-            logger.error(f"Process {pid} still running after SIGKILL")
+            logger.error(f"Process {pid} still running after kill signal")
         except OSError:
             logger.info("Server force stopped")
             
@@ -251,9 +261,16 @@ def send_reload_signal(settings: Settings) -> bool:
         return False
     
     try:
-        # Send SIGHUP for reload
-        os.kill(status["pid"], signal.SIGHUP)
-        logger.info("Sent reload signal to server")
+        if hasattr(signal, "SIGHUP"):
+            # Send SIGHUP for reload (POSIX-only)
+            os.kill(status["pid"], signal.SIGHUP)
+            logger.info("Sent reload signal (SIGHUP) to server")
+        else:
+            logger.warning(
+                "SIGHUP is not available on this platform; "
+                "reload signal not sent."
+            )
+            return False
         return True
         
     except OSError as e:

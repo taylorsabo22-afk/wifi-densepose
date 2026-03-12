@@ -12,6 +12,7 @@ from typing import Optional
 
 from src.config.settings import Settings
 from src.logger import get_logger
+from src.utils.platform import supports_fork
 
 logger = get_logger(__name__)
 
@@ -42,7 +43,14 @@ async def start_command(
     # Create PID file if running as daemon
     pid_file = None
     if daemon:
-        pid_file = _create_pid_file(settings)
+        if not supports_fork():
+            logger.warning(
+                "Daemon mode (os.fork) is not supported on this platform. "
+                "Running in foreground mode instead."
+            )
+            daemon = False
+        else:
+            pid_file = _create_pid_file(settings)
     
     try:
         # Initialize database
@@ -215,10 +223,11 @@ def _setup_signal_handlers() -> None:
         # The actual shutdown will be handled by the main loop
         sys.exit(0)
     
-    # Setup signal handlers
+    # Setup signal handlers (SIGINT is universally available)
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
+    # SIGTERM is POSIX-only
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, signal_handler)
     if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, signal_handler)
 
@@ -270,10 +279,23 @@ async def _run_server(config: dict) -> None:
 
 
 async def _run_as_daemon(config: dict, pid_file: Path) -> None:
-    """Run the server as a daemon."""
+    """Run the server as a daemon.
+    
+    Note: daemon mode requires ``os.fork()`` which is only available on
+    POSIX platforms. On Android/Termux systems that do not expose fork,
+    :func:`start_command` falls back to foreground mode automatically.
+    """
     
     logger.info("Starting server in daemon mode...")
     
+    if not supports_fork():
+        logger.error(
+            "Daemon mode is not supported on this platform (os.fork unavailable). "
+            "Falling back to foreground mode."
+        )
+        await _run_server(config)
+        return
+
     # Fork process
     try:
         pid = os.fork()

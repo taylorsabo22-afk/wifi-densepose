@@ -166,6 +166,14 @@ deployment = [
     "kubernetes>=28.1.0",
 ]
 
+android = [
+    # Minimal set for Android/Termux environments.
+    # Use opencv-python-headless (no display dependency).
+    "opencv-python-headless>=4.8.0",
+    # Async SSH is optional; router interface degrades gracefully without it.
+    "asyncssh>=2.14.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/ruvnet/wifi-densepose"
 Documentation = "https://github.com/ruvnet/wifi-densepose#readme"

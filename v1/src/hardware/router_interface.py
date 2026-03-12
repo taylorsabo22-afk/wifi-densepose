@@ -3,9 +3,15 @@
 import asyncio
 import logging
 from typing import Dict, Any, Optional
-import asyncssh
 from datetime import datetime, timezone
 import numpy as np
+
+try:
+    import asyncssh
+    _ASYNCSSH_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency
+    asyncssh = None  # type: ignore[assignment]
+    _ASYNCSSH_AVAILABLE = False
 
 try:
     from .csi_extractor import CSIData
@@ -75,6 +81,13 @@ class RouterInterface:
         Returns:
             True if connection successful, False otherwise
         """
+        if not _ASYNCSSH_AVAILABLE:
+            self.logger.error(
+                "asyncssh is not installed. "
+                "Install it with: pip install asyncssh"
+            )
+            self.is_connected = False
+            return False
         try:
             self.ssh_client = await asyncssh.connect(
                 self.host,
