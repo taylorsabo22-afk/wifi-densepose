@@ -181,6 +181,7 @@ def check_dependencies():
     optional_modules = [
         ('scapy', 'Scapy (for network packet capture)'),
         ('paramiko', 'Paramiko (for SSH connections)'),
+        ('asyncssh', 'asyncssh (for async SSH connections to routers)'),
         ('serial', 'PySerial (for serial communication)'),
         ('matplotlib', 'Matplotlib (for plotting)'),
         ('prometheus_client', 'Prometheus Client (for metrics)'),

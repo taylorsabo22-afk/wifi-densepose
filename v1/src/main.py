@@ -27,9 +27,11 @@ def setup_signal_handlers(orchestrator: ServiceOrchestrator):
         logging.info(f"Received signal {signum}, initiating graceful shutdown...")
         asyncio.create_task(orchestrator.shutdown())
         sys.exit(0)
-    
+
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # SIGTERM is POSIX-only; guard against platforms that lack it
+    if hasattr(signal, "SIGTERM"):
+        signal.signal(signal.SIGTERM, signal_handler)
 
 
 async def main():
